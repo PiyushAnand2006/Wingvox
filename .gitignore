@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# local scanner/tooling artifacts
+.mimosa/
+**/.mimosa/
+
+# desktop verification captures (contain real screen content — never commit)
+desktop/verify-*.png
+
+# misc
+*.log
+.DS_Store
+Thumbs.db
