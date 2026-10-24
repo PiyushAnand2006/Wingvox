@@ -1,6 +1,6 @@
 # Wingvox
 
-> **⚠ Reversed-engineered beta** — Wingvox is a reverse-engineered clone built for learning and hackathon purposes. It is **still under development and testing**: expect rough edges, breaking changes, and features that may not work in every browser or OS version.
+> **⚠ Reverse-engineered beta** — Wingvox is a reverse-engineered clone built for learning and hackathon purposes. It is **still under development and testing**: expect rough edges, breaking changes, and features that may not work in every browser or OS version.
 
 **Wingvox** — *wing* (your wingman; the theater wings where the helper waits offstage) + *vox* (voice) — **"the voice at your side on every call."** A live meeting copilot that runs entirely in your browser: it transcribes the conversation live, detects questions/objections/key terms, and answers them on the spot — plus screen awareness, personas, meeting notes, and a local knowledge base. The name was coined for this project; as of 2026-10-24, searches found no existing product using it.
 
