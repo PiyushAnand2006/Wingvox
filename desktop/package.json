@@ -24,6 +24,12 @@
       "preload.js",
       "package.json"
     ],
+    "extraResources": [
+      { "from": "../index.html", "to": "app/index.html" },
+      { "from": "../css", "to": "app/css" },
+      { "from": "../js", "to": "app/js" },
+      { "from": "../assets", "to": "app/assets" }
+    ],
     "win": {
       "target": ["nsis", "portable"],
       "icon": "../assets/logo/wingvox-mark-256.png"

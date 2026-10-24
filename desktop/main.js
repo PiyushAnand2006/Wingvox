@@ -7,11 +7,37 @@
 //   macOS   : setContentProtection(true) → NSWindowSharingNone
 //
 // Run:  cd desktop && npm install && npm start     (app must be served at the URL below)
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, desktopCapturer, protocol, net } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const { pathToFileURL } = require('node:url');
 
-const APP_URL = process.env.WINGVOX_URL || 'http://localhost:8000';
+// the web app ships inside the package and is served over wingvox:// —
+// the packaged app is fully self-contained (no dev server).
+// In dev it falls back to the local HTTP server unless WINGVOX_URL overrides.
+const WEB_ROOT = app.isPackaged
+  ? path.join(process.resourcesPath, 'app')
+  : path.join(__dirname, '..');
+const APP_URL = process.env.WINGVOX_URL
+  || (app.isPackaged ? 'wingvox://app/index.html' : 'http://localhost:8000');
+
+// secure+standard so getUserMedia/getDisplayMedia (secure contexts) work
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'wingvox', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
+]);
+
+function registerAppProtocol() {
+  protocol.handle('wingvox', (request) => {
+    const u = new URL(request.url);
+    let rel = decodeURIComponent(u.pathname).replace(/^\/+/, '');
+    if (!rel || rel.endsWith('/')) rel += 'index.html';
+    const file = path.normalize(path.join(WEB_ROOT, rel));
+    if (!file.startsWith(path.normalize(WEB_ROOT) + path.sep) && file !== path.normalize(WEB_ROOT)) {
+      return new Response('not found', { status: 404 }); // path traversal guard
+    }
+    return net.fetch(pathToFileURL(file).toString());
+  });
+}
 
 // mirrors Cluely's `isInvisible` opt-in default (F9), but Wingvox defaults it ON
 // because capture protection is this app's headline feature.
@@ -98,8 +124,45 @@ function createWindow() {
 
   win.webContents.on('did-finish-load', () => {
     console.log('[wingvox] loaded', APP_URL);
+    if (process.env.WINGVOX_SMOKE === '1') runSmoke();
   });
   win.on('closed', () => { win = null; });
+}
+
+// E2E smoke on the real renderer (dev or packaged exe): pill → Ask → dashboard →
+// insight pipeline. Results go to the console and userData/smoke.log.
+async function runSmoke() {
+  const report = (line) => {
+    console.log('[wingvox-smoke] ' + line);
+    try { fs.appendFileSync(path.join(app.getPath('userData'), 'smoke.log'), line + '\n'); } catch { }
+  };
+  try {
+    fs.rmSync(path.join(app.getPath('userData'), 'smoke.log'), { force: true });
+    const r = await win.webContents.executeJavaScript(`(async () => {
+      const r = {};
+      r.appExposed = typeof window.App === 'object';
+      r.pillVisible = !document.getElementById('pill').classList.contains('hidden');
+      document.getElementById('btnAskToggle').click();
+      r.panelOpens = !document.getElementById('chatPanel').classList.contains('hidden');
+      document.getElementById('btnDash').click();
+      r.dashOpens = !document.getElementById('dashboard').classList.contains('hidden');
+      r.modeCards = document.querySelectorAll('.mode-card').length;
+      document.getElementById('dashClose').click();
+      const line = 'How do you handle SSO for enterprise customers?';
+      window.Store.transcript.push({ ts: Date.now(), text: line, final: true });
+      window.App.onFinalTranscript(line);
+      await new Promise(res => setTimeout(res, 1200));
+      r.insight = document.querySelectorAll('#insightList .insight').length;
+      r.answer = !!document.querySelector('#insightList .insight .answer');
+      return r;
+    })()`);
+    report(JSON.stringify(r));
+    const ok = r.appExposed && r.pillVisible && r.panelOpens && r.dashOpens && r.modeCards >= 6 && r.insight >= 1;
+    report(ok ? 'PASS' : 'FAIL');
+  } catch (e) {
+    report('FAIL ' + (e.message || e));
+  }
+  setTimeout(() => app.quit(), 300);
 }
 
 // renderer → main: dynamic window sizing so the window hugs its visible content —
@@ -211,6 +274,7 @@ ipcMain.on('wingvox:ready', () => {
 
 app.whenReady().then(() => {
   app.setAppUserModelId('com.wingvox.desktop'); // taskbar presence + grouping
+  registerAppProtocol();
   createWindow();
 });
 
