@@ -1,6 +1,10 @@
 # dependencies
 node_modules/
 
+# build output
+desktop/dist/
+desktop/shell.log
+
 # local scanner/tooling artifacts
 .mimosa/
 **/.mimosa/
