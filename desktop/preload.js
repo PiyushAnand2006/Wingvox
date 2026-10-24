@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('wingvoxDesktop', {
   onHotkey: (cb) => ipcRenderer.on('wingvox:hotkey', (_e, action) => cb(action)),
   setSize: (opts) => ipcRenderer.send('wingvox:set-size', opts),
   moveWindow: (dx, dy) => ipcRenderer.send('wingvox:move-window', { dx, dy }),
+  setWindowVisible: (v) => ipcRenderer.send('wingvox:set-window-visible', v),
   ready: () => ipcRenderer.send('wingvox:ready'),
 });

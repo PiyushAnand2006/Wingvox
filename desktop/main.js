@@ -24,32 +24,57 @@ function applyProtection() {
   const protect = state.isInvisible;
   if (win && !win.isDestroyed()) {
     win.setContentProtection(protect);
-    // Cluely: noFocusWhenInvisible → unfocusable + off the taskbar while hidden from capture
-    win.setSkipTaskbar(protect);
-    if (process.platform !== 'darwin') win.setFocusable(!protect);
   }
   if (win && !win.isDestroyed()) {
     win.webContents.send('wingvox:protection-changed', protect);
   }
 }
 
+// ---------- pill anchor persistence (so the window reopens where you left it) ----------
+const anchorFile = () => path.join(app.getPath('userData'), 'wingvox-anchor.json');
+let saveTimer = null;
+function saveAnchorSoon() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { if (winAnchor) fs.writeFileSync(anchorFile(), JSON.stringify(winAnchor)); } catch { }
+  }, 250);
+}
+function loadAnchor() {
+  try {
+    const a = JSON.parse(fs.readFileSync(anchorFile(), 'utf8'));
+    if (Number.isFinite(a.centerX) && Number.isFinite(a.y)) return a;
+  } catch { }
+  return null;
+}
+
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay();
+  // restore the last pill position if we saved one, else default top-center
+  const saved = loadAnchor();
+  const width = 430, height = 660;
+  let x, y;
+  if (saved) {
+    x = Math.round(saved.centerX - width / 2);
+    y = Math.round(saved.y);
+  } else {
+    x = workArea.x + Math.round(workArea.width / 2 - width / 2);
+    y = workArea.y + 14;
+  }
+  ({ x, y } = clampToWorkArea(x, y, width, height));
   win = new BrowserWindow({
-    // Cluely's Control-window flags (F9), scaled up to fit the chat panel
-    x: workArea.x + Math.round(workArea.width / 2 - 210),
-    y: workArea.y + 14,
-    width: 430,
-    height: 660,
+    x,
+    y,
+    width,
+    height,
     frame: false,
     transparent: true,
     hasShadow: false,
     fullscreenable: false,
     minimizable: false,
     resizable: false,
-    skipTaskbar: true,
     hiddenInMissionControl: true,
     title: 'Wingvox',
+    icon: path.join(__dirname, '..', 'assets', 'logo', 'wingvox-mark-256.png'),
     backgroundColor: '#00000000',
     // on macOS this makes the glass panels genuinely frost the desktop behind the window
     ...(process.platform === 'darwin' ? { vibrancy: 'under-window', visualEffectState: 'active' } : {}),
@@ -69,7 +94,7 @@ function createWindow() {
   win.loadURL(APP_URL);
   applyProtection();
   // the pill renders centered in the window at top — that's the resize anchor
-  winAnchor = { centerX: win.getPosition()[0] + 430 / 2, y: win.getPosition()[1] };
+  winAnchor = { centerX: x + width / 2, y };
 
   win.webContents.on('did-finish-load', () => {
     console.log('[wingvox] loaded', APP_URL);
@@ -122,6 +147,7 @@ ipcMain.on('wingvox:set-size', (_e, opts = {}) => {
   const height = Math.max(56, Math.round(opts.height || 0));
   const pos = clampToWorkArea(Math.round(winAnchor.centerX - width / 2), winAnchor.y, width, height);
   win.setBounds({ ...pos, width, height });
+  saveAnchorSoon();
 });
 
 // renderer → main: drag/nudge moves the OS window (the DOM stays pinned at 0,0 inside it)
@@ -130,6 +156,20 @@ ipcMain.on('wingvox:move-window', (_e, { dx = 0, dy = 0 } = {}) => {
   if (winAnchor) { winAnchor.centerX += dx; winAnchor.y += dy; }
   const b = win.getBounds();
   win.setBounds({ x: b.x + Math.round(dx), y: b.y + Math.round(dy), width: b.width, height: b.height });
+  saveAnchorSoon();
+});
+
+// renderer → main: stealth — fully remove the window from screen and click path
+// (restore via the global Ctrl+Shift+H, since a hidden window can't show the dot)
+ipcMain.on('wingvox:set-window-visible', (_e, visible) => {
+  if (!win || win.isDestroyed()) return;
+  if (visible) {
+    win.setOpacity(0);
+    win.show();
+    setTimeout(() => { if (win && !win.isDestroyed()) win.setOpacity(1); }, 30);
+  } else {
+    win.hide();
+  }
 });
 
 // renderer → main: eye-icon toggles capture protection (Cluely's "Make Invisible")
@@ -138,8 +178,10 @@ ipcMain.on('wingvox:set-protection', (_e, on) => {
   applyProtection();
 });
 
-// global hotkeys from Cluely's shipped map (F2): toggleVisibility = Ctrl+\,
-// toggleSession = Ctrl+Shift+\ (forwarded to the renderer)
+// global hotkeys from Cluely's shipped map (F2), browser-adapted:
+//   Ctrl+\        toggle invisibility (capture protection)
+//   Ctrl+Shift+\  toggle session (forwarded to the renderer)
+//   Ctrl+Shift+H  stealth toggle — global so a hidden window can always come back
 ipcMain.on('wingvox:ready', () => {
   globalShortcut.register('CommandOrControl+\\', () => {
     state.isInvisible = !state.isInvisible;
@@ -148,10 +190,25 @@ ipcMain.on('wingvox:ready', () => {
   globalShortcut.register('CommandOrControl+Shift+\\', () => {
     if (win && !win.isDestroyed()) win.webContents.send('wingvox:hotkey', 'toggle-session');
   });
+  globalShortcut.register('CommandOrControl+Shift+H', () => {
+    if (win && !win.isDestroyed()) {
+      if (!win.isVisible()) {
+        win.setOpacity(0);
+        win.show();
+        setTimeout(() => { if (win && !win.isDestroyed()) win.setOpacity(1); }, 30);
+        win.webContents.send('wingvox:hotkey', 'stealth-off');
+      } else {
+        win.webContents.send('wingvox:hotkey', 'stealth-on');
+      }
+    }
+  });
   console.log('[wingvox] capture protection:', state.isInvisible ? 'ON (invisible to screen share)' : 'off');
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  app.setAppUserModelId('com.wingvox.desktop'); // taskbar presence + grouping
+  createWindow();
+});
 
 // Self-verification (WINGVOX_VERIFY=1): capture the screen via desktopCapturer —
 // the same screen-capture path conferencing apps use — once with protection ON
@@ -205,4 +262,5 @@ if (process.env.WINGVOX_VERIFY === '2') {
   app.whenReady().then(() => setTimeout(verifyWindowSizing, 1000));
 }
 app.on('window-all-closed', () => app.quit());
+app.on('before-quit', () => { try { if (winAnchor) fs.writeFileSync(anchorFile(), JSON.stringify(winAnchor)); } catch { } });
 app.on('will-quit', () => globalShortcut.unregisterAll());

@@ -206,6 +206,9 @@
     stealth = on;
     $('overlay').classList.toggle('hidden', on);
     $('stealthDot').classList.toggle('hidden', !on);
+    // in the desktop shell, hide the whole OS window — otherwise the pill-sized
+    // window still occupies (and blocks clicks on) that little patch of screen.
+    if (window.wingvoxDesktop) window.wingvoxDesktop.setWindowVisible(!on);
   }
 
   function toggleDashboard(force) {
@@ -503,7 +506,12 @@
     paint(d.captureProtected);
     eye.onclick = () => d.setProtection(!eye.classList.contains('active'));
     d.onProtectionChanged(paint);
-    d.onHotkey((action) => { if (action === 'toggle-session') setSession(!Store.listening); });
+    d.onHotkey((action) => {
+      if (action === 'toggle-session') setSession(!Store.listening);
+      // global Ctrl+Shift+H (main intercepts it system-wide so a hidden window can come back)
+      if (action === 'stealth-on') setStealth(true);
+      if (action === 'stealth-off') setStealth(false);
+    });
     d.ready();
     syncWindowSize();
     // panel content (insight cards) changes height as it fills — keep the window hugging it
