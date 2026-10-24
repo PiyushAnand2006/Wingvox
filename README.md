@@ -65,7 +65,33 @@ The **floating meeting window** (control pill + chat panel) uses a **glassmorphi
 1. **Control pill** — a translucent rounded pill floats at the top of the page: white logo, status dot, blue-gradient **Ask** button, mic (session) button, eye (invisibility) button, dashboard button. Drag it anywhere; double-click it to open the Dashboard.
 2. **Ask** ⇄ **Hide** — clicking Ask opens the chat panel beneath the pill: quick-action chips (Assist / What should I say? / Follow-up questions / Recap / Share screen), Live Insight chips, and the ask bar. The Ask button flips to a dark **Hide** with a shimmer while a response is running — the exact behavior of their shipped control bar.
 3. **Session** — the mic button starts/stops a live session (red pulsing dot). Finalized speech lines are checked for questions, objections, and key terms; hits appear as **rounded-full insight chips** (`?`/`!`/`#` icons) that expand inline into answers. `Ctrl+Shift+L` does the same. Demo: Dashboard → General → *Play demo conversation*.
-4. **Dashboard** — a separate light-themed window (like theirs): sidebar (General / Modes / Notes / Knowledge / Settings), `text-[30px] tracking-tight` headings, persona cards with their color coding (Sales=pink, Recruiting=amber, Team Meet=emerald, Looking for work=blue, Lecture=purple), notes generation per-persona + Markdown export + pre-call brief, knowledge base with the shipped 3-file/20MB limits, and settings.
+4. **Dashboard** — a separate light-themed window (like theirs): sidebar (General / Modes / **Transcript** / Notes / Knowledge / Settings), `text-[30px] tracking-tight` headings, persona cards with their color coding (Sales=pink, Recruiting=amber, Team Meet=emerald, Looking for work=blue, Lecture=purple), notes generation per-persona + Markdown export + pre-call brief, knowledge base with the shipped 3-file/20MB limits, and settings.
+
+### Hearing the other party (system-audio loopback)
+
+Mic mode (default) transcribes your microphone keylessly via Web Speech. **System-audio mode** hears the meeting — the other party too: Settings → *Audio source* → *System audio*, then start a session and pick a source with **"Share audio"** enabled. Wingvox gates 7-second chunks with an RMS speech detector (its stand-in for Cluely's Silero VAD) and transcribes each through an OpenAI-compatible `/audio/transcriptions` endpoint. This mode needs an API key; without one it refuses to start and falls back gracefully.
+
+### Streaming, persistence, transcript
+
+- **Streaming** — with a real endpoint, answers stream token-by-token (SSE); mock mode simulates the same reveal.
+- **Sessions survive reloads** — transcript, insight cards, and notes persist to `localStorage` (`wingvox.session.v1`, debounced) and come back on the next launch.
+- **Transcript view** — Dashboard → Transcript lists every finalized line with timestamps, exports `.txt`, and *Clear session* wipes the snapshot.
+
+## Tests & CI
+
+Zero-dependency test suite (`npm test`, no framework, in-process): trigger detection cases, knowledge-base limits + retrieval, shipped prompts/personas + mock streaming, settings migration + session snapshot round-trip. `npm run check` syntax-checks every module. GitHub Actions runs both on every push/PR (`.github/workflows/ci.yml`).
+
+## Packaging
+
+`cd desktop && npm install && npm run dist` builds installers with electron-builder (Windows NSIS + portable, macOS DMG, Linux AppImage). `npm run dist:dir` produces an unpacked build — validated on Windows (`dist/win-unpacked/Wingvox.exe`). Signed Windows installers need admin or Developer Mode for electron-builder's winCodeSign cache step. Note: the packaged app still expects the web app at `http://localhost:8000` (set `WINGVOX_URL` to point it elsewhere).
+
+## Deploy the web app
+
+The web app is fully static — any static host works. GitHub Pages: push the repo, enable Pages on the `main` branch, done. (Speech recognition, screen sharing, and PiP need Chrome/Edge over http(s), which Pages provides.)
+
+## License
+
+MIT — see [LICENSE](LICENSE). The Wingvox logo is © 2026 Piyush Anand ([assets/logo/LOGO-COPYRIGHT.md](assets/logo/LOGO-COPYRIGHT.md)).
 5. **Invisibility** — the eye button (or `Ctrl+Shift+H`) collapses everything to a tiny dot; `Ctrl+Shift+P` floats the pill+panel above other apps via Document Picture-in-Picture.
 
 ### Hotkeys
@@ -92,7 +118,9 @@ The **floating meeting window** (control pill + chat panel) uses a **glassmorphi
 | Chat panel with insight chips + quick actions | ✅ | ✅ same classes/colors |
 | Light dashboard with sidebar + modes | ✅ | ✅ same tokens |
 | Geist typography, oklch palette | ✅ | ✅ |
-| Live transcription (20 locales) | sox/audiotee + Silero VAD + server ASR | Web Speech API |
+| Live transcription (20 locales) | sox/audiotee + Silero VAD + server ASR | Web Speech (mic) + loopback STT (system) |
+| Streaming token-by-token answers | ✅ | ✅ SSE (+ simulated in mock) |
+| Session history / transcript | ✅ | ✅ dashboard Transcript view + .txt export |
 | Live Insights (question/objection/term detection → auto-answer) | server-side keyword detection | client-side `detectTrigger()` |
 | Assist / Say / Follow-ups / Recap — same shipped prompts | ✅ | ✅ verbatim from their bundle |
 | Modes with per-mode note sections | ✅ | ✅ same personas + sections |
@@ -100,7 +128,7 @@ The **floating meeting window** (control pill + chat panel) uses a **glassmorphi
 | Knowledge base (RAG), 3 files / 20 MB free | ✅ | ✅ same limits, local only |
 | Never joins the call, no bots | ✅ | ✅ |
 | Overlay invisible to screen share | `setContentProtection` (OS window flag) | ✅ **in desktop mode** (`desktop/` Electron shell, A/B verified); browser tab stays visible |
-| Hears the other party (system audio) | audiotee (macOS) / sox loopback (Win) | mic-only; pick loopback device as mic, or demo mode |
+| Hears the other party (system audio) | audiotee (macOS) / sox loopback (Win) + server ASR | ✅ system-audio mode: loopback + RMS gate + `/audio/transcriptions` (needs key); mic mode keyless |
 | Server accounts, CRM sync, teams | ✅ | ❌ (local-only by design) |
 
 ## Files
