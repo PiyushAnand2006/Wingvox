@@ -18,6 +18,20 @@ Floating above other apps (the dashboard here), and the dashboard itself:
 
 ![Wingvox dashboard — modes, notes, knowledge, settings](assets/screenshots/dashboard.png)
 
+## 🎥 Demo Video
+
+<div align="center">
+
+[![Wingvox demo video — click to play](docs/demo/brag-poster.jpg)](docs/demo/brag.mp4)
+
+</div>
+
+> 🎬 **Wingvox launch video (24s · 1080p · narrated):** the live flow — a question lands mid-call, the pill catches it and streams the answer, the receipts for the reverse-engineering, and the window vanishing from a screen share. Local copy: [`docs/demo/brag.mp4`](docs/demo/brag.mp4)
+
+<!-- For GitHub's inline video player (as in AgriSense-AI): drag docs/demo/brag.mp4
+     into any issue/PR comment box on GitHub, then replace the thumbnail block above
+     with the generated bare https://github.com/user-attachments/assets/... URL. -->
+
 ## Architecture
 
 The renderer runs in a browser tab or in the desktop shell; the shell's window is excluded from screen capture, so shares and recordings never see it. Interactive version: [diagrams/wingvox-architecture.html](diagrams/wingvox-architecture.html).

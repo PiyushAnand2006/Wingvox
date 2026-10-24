@@ -16,3 +16,7 @@ desktop/verify-*.png
 *.log
 .DS_Store
 Thumbs.db
+
+# brag video workflow output (rendered locally; video hosted on GitHub user-attachments)
+brag-output/
+.brag-venv/
