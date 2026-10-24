@@ -1,8 +1,28 @@
 # Wingvox
 
+> **⚠ Reversed-engineered beta** — Wingvox is a reverse-engineered clone built for learning and hackathon purposes. It is **still under development and testing**: expect rough edges, breaking changes, and features that may not work in every browser or OS version.
+
 **Wingvox** — *wing* (your wingman; the theater wings where the helper waits offstage) + *vox* (voice) — **"the voice at your side on every call."** A live meeting copilot that runs entirely in your browser: it transcribes the conversation live, detects questions/objections/key terms, and answers them on the spot — plus screen awareness, personas, meeting notes, and a local knowledge base. The name was coined for this project; as of 2026-10-24, searches found no existing product using it.
 
-The UI is a replica of Cluely's shipped design: colors, gradients, shadows, chips, and the pill → chat → dashboard flow are taken from their actual code (see **[EVIDENCE.md](EVIDENCE.md)** §0, findings F1–F8). The prompts, personas, hotkey map, and free-tier limits in this project come from the same shipped build.
+The UI is a replica of Cluely's shipped design: colors, gradients, shadows, chips, and the pill → chat → dashboard flow are taken from their actual code (see **[EVIDENCE.md](EVIDENCE.md)** §0, findings F1–F8). The prompts, personas, hotkey map, and free-tier limits in this project come from that same shipped build.
+
+## Screenshots
+
+The glass overlay — listening, answering a detected question mid-conversation:
+
+![Wingvox overlay answering a detected question](assets/screenshots/hero-overlay.png)
+
+Floating above other apps (the dashboard here), and the dashboard itself:
+
+![Wingvox floating over other apps](assets/screenshots/overlay-over-apps.png)
+
+![Wingvox dashboard — modes, notes, knowledge, settings](assets/screenshots/dashboard.png)
+
+## Architecture
+
+The renderer runs in a browser tab or in the desktop shell; the shell's window is excluded from screen capture, so shares and recordings never see it. Interactive version: [diagrams/wingvox-architecture.html](diagrams/wingvox-architecture.html).
+
+![Wingvox architecture](diagrams/wingvox-architecture.svg)
 
 ## Run it
 
@@ -95,6 +115,8 @@ js/speech.js      Web Speech transcription, 20 languages
 js/screen.js      screen frames for vision
 js/app.js         Cluely flow wiring: pill/panel/dashboard, insights, actions, stealth, PiP, hotkeys
 desktop/          Electron shell: transparent always-on-top window + capture protection (F9)
+diagrams/         architecture diagram (interactive HTML + exported SVG)
+assets/           logo marks + app screenshots used in this README
 EVIDENCE.md       every Cluely claim + shipped-code findings (F1–F9), with sources
 assets/logo/      original Wingvox logo (© 2026, see assets/logo/LOGO-COPYRIGHT.md) — SVG/PNG + favicon
 ```

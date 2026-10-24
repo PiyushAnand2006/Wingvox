@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wingvox architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;   /* white-smoke */
+      --color-ink:     #2d3142;   /* jet-black */
+      --color-muted:   #4f5d75;   /* blue-slate */
+      --color-accent:  #eb6c36;   /* atomic-tangerine */
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1200px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 960px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Diagram Design</p>
+    <h1>Wingvox architecture</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="wingvox-arch-title wingvox-arch-desc">
+        <title id="wingvox-arch-title">Wingvox architecture</title>
+        <desc id="wingvox-arch-desc">How the Wingvox renderer, desktop shell, and capture-protected window connect to platform APIs, the knowledge base, and the LLM endpoint.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- zones (painted before arrows and nodes) -->
+        <rect x="48" y="136" width="400" height="344" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="158" y="140" width="180" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="248" y="149" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">RENDERER · BROWSER TAB OR DESKTOP SHELL</text>
+
+        <rect x="560" y="136" width="352" height="232" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <rect x="669" y="140" width="134" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="736" y="149" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">DESKTOP SHELL · ELECTRON MAIN</text>
+
+        <!-- arrows (before nodes) -->
+
+        <!-- Web Speech → app : straight vertical up -->
+        <line x1="168" y1="312" x2="168" y2="276" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <rect x="174" y="288" width="66" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="178" y="297" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">TRANSCRIPT</text>
+
+        <!-- getDisplayMedia → app : straight vertical up -->
+        <line x1="328" y1="312" x2="328" y2="276" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <rect x="334" y="288" width="48" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="338" y="297" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">FRAMES</text>
+
+        <!-- app → KB : straight vertical down -->
+        <line x1="248" y1="276" x2="248" y2="404" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <rect x="256" y="330" width="60" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="260" y="339" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">RETRIEVE</text>
+
+        <!-- app → Electron main : straight horizontal, coral (protection path) -->
+        <line x1="408" y1="224" x2="592" y2="224" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+        <rect x="460" y="204" width="80" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="500" y="213" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">IPC·PROTECT</text>
+
+        <!-- Electron main → protected window : straight vertical down -->
+        <line x1="736" y1="256" x2="736" y2="296" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <rect x="742" y="270" width="82" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="746" y="279" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">HOSTS·PROTECT</text>
+
+        <!-- app → LLM endpoint : elbow right+down, link-blue -->
+        <path d="M 408,256 H 520 Q 528,256 528,264 V 513" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <rect x="458" y="380" width="56" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="520" y="389" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.06em">ASSIST</text>
+
+        <!-- protected window → screen share : dashed vertical, excluded from capture -->
+        <line x1="736" y1="372" x2="736" y2="456" stroke="#4f5d75" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+        <rect x="742" y="408" width="90" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="746" y="417" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">NEVER CAPTURED</text>
+
+        <!-- nodes -->
+
+        <!-- Wingvox web app (backend) -->
+        <rect x="88" y="200" width="320" height="76" rx="6" fill="#f5f5f5"/>
+        <rect x="88" y="200" width="320" height="76" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="96" y="206" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+        <text x="112" y="215" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
+        <text x="248" y="236" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Wingvox web app</text>
+        <text x="248" y="252" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">pill · chat panel · dashboard</text>
+
+        <!-- Web Speech API (input) -->
+        <rect x="96" y="312" width="144" height="56" rx="6" fill="#f5f5f5"/>
+        <rect x="96" y="312" width="144" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+        <rect x="104" y="318" width="52" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.50)" stroke-width="0.8"/>
+        <text x="130" y="327" fill="rgba(79,93,117,0.85)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLATFORM</text>
+        <text x="168" y="344" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Web Speech API</text>
+        <text x="168" y="358" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">mic → transcript</text>
+
+        <!-- Screen capture (input) -->
+        <rect x="256" y="312" width="144" height="56" rx="6" fill="#f5f5f5"/>
+        <rect x="256" y="312" width="144" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+        <rect x="264" y="318" width="52" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.50)" stroke-width="0.8"/>
+        <text x="290" y="327" fill="rgba(79,93,117,0.85)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLATFORM</text>
+        <text x="328" y="344" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Screen capture</text>
+        <text x="328" y="358" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">getDisplayMedia</text>
+
+        <!-- Knowledge base (store) -->
+        <rect x="88" y="404" width="320" height="52" rx="6" fill="#f5f5f5"/>
+        <rect x="88" y="404" width="320" height="52" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+        <rect x="96" y="410" width="36" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+        <text x="114" y="419" fill="rgba(79,93,117,0.85)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STORE</text>
+        <text x="248" y="436" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Knowledge base + settings</text>
+        <text x="248" y="450" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">localStorage</text>
+
+        <!-- Electron main (backend) -->
+        <rect x="592" y="200" width="288" height="56" rx="6" fill="#f5f5f5"/>
+        <rect x="592" y="200" width="288" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <rect x="600" y="206" width="36" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+        <text x="618" y="215" fill="rgba(45,49,66,0.80)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MAIN</text>
+        <text x="736" y="230" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Electron main</text>
+        <text x="736" y="246" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">IPC · anchor · hotkeys · sizing</text>
+
+        <!-- Capture-protected window (focal) -->
+        <rect x="592" y="296" width="288" height="76" rx="6" fill="#f5f5f5"/>
+        <rect x="592" y="296" width="288" height="76" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+        <rect x="600" y="302" width="48" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+        <text x="624" y="311" fill="rgba(235,108,54,0.90)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">WINDOW</text>
+        <text x="736" y="332" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Capture-protected window</text>
+        <text x="736" y="348" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">always-on-top · WDA_EXCLUDEFROMCAPTURE</text>
+
+        <!-- LLM endpoint (external) -->
+        <rect x="312" y="520" width="336" height="52" rx="6" fill="#f5f5f5"/>
+        <rect x="312" y="520" width="336" height="52" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+        <rect x="320" y="526" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="334" y="535" fill="rgba(45,49,66,0.60)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
+        <text x="480" y="548" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">LLM endpoint</text>
+        <text x="480" y="562" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">OpenAI-compatible · key stays local</text>
+
+        <!-- Screen share (external) -->
+        <rect x="592" y="456" width="288" height="52" rx="6" fill="#f5f5f5"/>
+        <rect x="592" y="456" width="288" height="52" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+        <rect x="600" y="462" width="56" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+        <text x="628" y="471" fill="rgba(45,49,66,0.60)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EXTERNAL</text>
+        <text x="736" y="484" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Screen share / recorder</text>
+        <text x="736" y="498" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Zoom · Meet · Teams · OBS</text>
+
+        <!-- legend: horizontal bottom strip -->
+        <line x1="48" y1="556" x2="912" y2="556" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+        <line x1="56" y1="576" x2="88" y2="576" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <text x="96" y="579" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">INTERNAL</text>
+        <line x1="196" y1="576" x2="228" y2="576" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+        <text x="236" y="579" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">PROTECTION PATH</text>
+        <line x1="384" y1="576" x2="416" y2="576" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+        <text x="424" y="579" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">API CALL</text>
+        <line x1="520" y1="576" x2="552" y2="576" stroke="#4f5d75" stroke-width="1" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+        <text x="560" y="579" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">EXCLUDED FROM CAPTURE</text>
+        <rect x="742" y="569" width="20" height="14" rx="3" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+        <text x="770" y="579" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">FOCAL NODE</text>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
