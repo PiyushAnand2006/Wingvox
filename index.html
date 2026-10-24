@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Wingvox — real-time meeting copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<!-- Backdrop: stands in for the video call you'd be on -->
+<div id="stage">
+  <div class="stage-glow"></div>
+  <div class="stage-card">
+    <h1>Wingvox</h1>
+    <p>Your voice at your side — a live meeting copilot, running entirely in your browser.</p>
+    <ul>
+      <li>Click <b>Ask</b> on the pill to open the assistant</li>
+      <li>Press the mic button (or <b>Ctrl+Shift+L</b>) to start a session — it listens and answers live</li>
+      <li>Double-click the pill to open the Dashboard (modes, notes, knowledge, settings)</li>
+      <li><b>Ctrl+Enter</b> anywhere = instant assist · <b>Ctrl+Shift+H</b> = invisibility</li>
+    </ul>
+    <p class="hint warn">Use responsibly — only where real-time AI help is allowed.</p>
+  </div>
+</div>
+
+<!-- Control pill + chat panel — they move together, like Cluely's ControlAndChatWindowPosition -->
+<div id="overlay">
+  <!-- The control bar: replica of Cluely's shipped pill (EVIDENCE.md F8) -->
+  <div id="pill" class="pill" title="Drag to move · double-click for Dashboard">
+    <div class="pill-logo" aria-hidden="true"></div>
+    <span id="pillDot" class="pill-dot" aria-hidden="true"></span>
+    <button id="btnAskToggle" class="ask-btn" title="Toggle assistant (Ctrl+Enter)">
+      <span id="askLabel" class="ask-label">Ask</span>
+    </button>
+    <button id="btnSession" class="round-btn" title="Start session (Ctrl+Shift+L)">&#x23F8;</button>
+    <button id="btnEye" class="round-btn" title="Toggle invisibility (Ctrl+Shift+H)">&#x1F441;</button>
+    <button id="btnDash" class="round-btn" title="Dashboard (double-click pill)">&#x2302;</button>
+  </div>
+
+  <!-- Chat panel: insights + quick actions + ask input -->
+  <div id="chatPanel" class="chat-panel hidden">
+    <div class="panel-head">
+      <span class="session-badge"><span id="stateDot" class="state-dot"></span><span id="stateText">Idle</span></span>
+      <span id="protectBadge" class="protect-badge hidden" title="This window is excluded from screen capture (SetWindowDisplayAffinity) — screen shares, recordings, and screenshots never show it.">&#128737; Invisible to screen share</span>
+      <span class="spacer"></span>
+      <span id="modeChip" class="mode-chip">General</span>
+      <button id="btnPip" class="icon-btn" title="Float above other apps (Ctrl+Shift+P)">&#x29C9;</button>
+    </div>
+
+    <div class="chips-wrap">
+      <div class="chips-row" id="quickRow">
+        <button class="chip" data-action="assist"><span class="chip-ic q">&#9889;</span>Assist</button>
+        <button class="chip" data-action="say"><span class="chip-ic q">&#128172;</span>What should I say?</button>
+        <button class="chip" data-action="follow"><span class="chip-ic q">&#129517;</span>Follow-up questions</button>
+        <button class="chip" data-action="recap"><span class="chip-ic q">&#128221;</span>Recap</button>
+      </div>
+
+      <div id="insightList" class="insight-list">
+        <div class="empty">Live Insights appear here when a question, objection, or key term is detected. Start a session with the mic button, or double-click the pill for the Dashboard.</div>
+      </div>
+    </div>
+
+    <div class="askbar">
+      <label class="screen-attach" id="screenAttachWrap" title="Attach latest screen frame">
+        <input type="checkbox" id="screenAttach" disabled/>&#128421;
+      </label>
+      <input id="askInput" placeholder="Ask about your screen or conversation…"/>
+      <button id="btnAsk" class="send-btn" title="Send">&#8593;</button>
+    </div>
+    <div id="interim" class="interim"></div>
+  </div>
+</div>
+
+<!-- Dashboard: light theme, like Cluely's dashboard window -->
+<div id="dashboard" class="dashboard hidden">
+  <aside class="side">
+    <div class="side-brand"><span class="side-logo"></span><b>Wingvox</b></div>
+    <nav class="side-nav">
+      <button class="side-item active" data-view="general">&#9636;&nbsp; General</button>
+      <button class="side-item" data-view="modes">&#9679;&nbsp; Modes</button>
+      <button class="side-item" data-view="notes">&#128221;&nbsp; Notes</button>
+      <button class="side-item" data-view="knowledge">&#128218;&nbsp; Knowledge</button>
+      <button class="side-item" data-view="settings">&#9881;&nbsp; Settings</button>
+    </nav>
+    <div class="side-foot">
+      <span id="sideMode" class="dim">Mode: General</span>
+      <button id="sideListen" class="side-listen">Start session</button>
+    </div>
+  </aside>
+
+  <main class="dash-main">
+    <!-- General -->
+    <section id="dash-general" class="dash-view active">
+      <h2 class="dash-h">General</h2>
+      <p class="dash-sub">Pick a mode to shape answers and meeting notes.</p>
+      <div id="modeGrid" class="mode-grid"></div>
+      <h3 class="dash-h3">Last session</h3>
+      <div id="dashSession" class="dash-card dim">No session yet in this browser. Start one from the pill.</div>
+    </section>
+
+    <!-- Modes -->
+    <section id="dash-modes" class="dash-view">
+      <h2 class="dash-h">Modes</h2>
+      <p class="dash-sub">Personas recovered from Cluely's shipped build — same prompts, same note sections.</p>
+      <div id="modeGrid2" class="mode-grid"></div>
+    </section>
+
+    <!-- Notes -->
+    <section id="dash-notes" class="dash-view">
+      <h2 class="dash-h">Notes</h2>
+      <div class="row-bar">
+        <span class="spacer"></span>
+        <button id="btnNotes" class="btn primary">Generate meeting notes</button>
+        <button id="btnExport" class="btn" disabled>Export .md</button>
+      </div>
+      <div id="notesOut" class="notes"><div class="empty dim">Notes (per-mode sections, follow-up email) appear here and stay in this browser.</div></div>
+      <div class="brief-box">
+        <label>Pre-call brief — paste a bio / company blurb about who you're meeting</label>
+        <textarea id="briefIn" rows="2" placeholder="e.g. Dana Kim, VP Engineering at Acme — scaling platform team…"></textarea>
+        <button id="btnBrief" class="btn">Generate brief</button>
+      </div>
+    </section>
+
+    <!-- Knowledge -->
+    <section id="dash-knowledge" class="dash-view">
+      <h2 class="dash-h">Knowledge</h2>
+      <p class="dash-sub">Docs are retrieved into every answer (RAG). Up to 3 files, 20 MB each — the shipped free-tier limits.</p>
+      <input type="file" id="kbFiles" multiple accept=".txt,.md,.markdown,.csv,.json"/>
+      <textarea id="kbPaste" rows="3" placeholder="…or paste text (a script, cheat sheet, project doc)"></textarea>
+      <div class="row-bar"><button id="kbAddPaste" class="btn">Add pasted text</button></div>
+      <div id="kbList"></div>
+    </section>
+
+    <!-- Settings -->
+    <section id="dash-settings" class="dash-view">
+      <h2 class="dash-h">Settings</h2>
+      <div class="form">
+        <label>API endpoint (OpenAI-compatible)</label>
+        <input id="setEndpoint"/>
+        <label>API key <span class="dim">(stored locally in this browser only)</span></label>
+        <input id="setKey" type="password" placeholder="sk-…"/>
+        <label>Model</label>
+        <input id="setModel" placeholder="gpt-4o-mini"/>
+        <label>Mode</label>
+        <select id="personaSel"></select>
+        <label>Custom instructions</label>
+        <textarea id="setInstr" rows="3" placeholder="e.g. Keep answers under 60 words, confident, first person."></textarea>
+        <label class="chk"><input type="checkbox" id="setAuto"/> Auto-answer detected questions (Live Insights)</label>
+        <label class="chk"><input type="checkbox" id="setScreenCtx"/> Auto-attach screen frame when answering</label>
+        <label>Overlay opacity: <span id="opVal">100</span>%</label>
+        <input id="setOpacity" type="range" min="30" max="100" value="100"/>
+        <div class="dim small">No key? The app runs in <b>Mock AI</b> mode — everything works with local template answers grounded in your knowledge base.</div>
+      </div>
+    </section>
+
+    <button id="dashClose" class="dash-close" title="Close dashboard">&#10005;</button>
+  </main>
+</div>
+
+<!-- Stealth dot -->
+<div id="stealthDot" class="hidden" title="Wingvox — click or press Ctrl+Shift+H to restore">&#9679;</div>
+
+<script src="js/store.js"></script>
+<script src="js/kb.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/speech.js"></script>
+<script src="js/screen.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
