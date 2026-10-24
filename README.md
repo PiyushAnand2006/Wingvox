@@ -32,6 +32,9 @@ You get a transparent, frameless, always-on-top glass window running the full ap
 - **Eye button** = toggle capture protection (Cluely's "Make Invisible"); a 🛡 badge in the panel shows the live state.
 - **`Ctrl+\` / `Ctrl+Shift+\`** — Cluely's shipped global hotkeys: toggle invisibility / toggle session (work even when the window isn't focused).
 - **Dynamic sizing** — the window hugs its visible content: pill-only when collapsed (~250×64), pill + panel when Ask is open, large and centered when the Dashboard is open. Nothing invisible blocks clicks behind it, and dragging the pill moves the whole window.
+- **It remembers where you put it** — the pill position persists across restarts (`%APPDATA%/Wingvox/wingvox-anchor.json`), so drag it away from your browser tabs once and it stays there.
+- **Taskbar presence** — Wingvox shows a taskbar icon (quit it from there); it is invisible only to screen *captures*, never to you.
+- **`Ctrl+Shift+H` is global in desktop mode** — fully hides the window (nothing left blocking clicks) and brings it back, even when the window is already hidden.
 - Verified in-repo: `WINGVOX_VERIFY=1 npm start` captures the screen twice via `desktopCapturer` (the same path conferencing apps use) — with protection ON the window is absent from the frame, with it OFF the window appears (`desktop/verify-ON.png` / `verify-OFF.png`).
 - macOS also gets `vibrancy: under-window`, so the glass panels genuinely frost the desktop behind them. On Windows the panels are translucent without desktop-blur (a Windows/Electron limitation).
 
