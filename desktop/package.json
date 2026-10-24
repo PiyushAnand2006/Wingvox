@@ -1,0 +1,13 @@
+{
+  "name": "wingvox-desktop",
+  "productName": "Wingvox",
+  "version": "1.0.0",
+  "description": "Wingvox desktop shell — capture-protected overlay window",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
