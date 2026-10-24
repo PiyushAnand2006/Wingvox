@@ -87,7 +87,11 @@ Zero-dependency test suite (`npm test`, no framework, in-process): trigger detec
 
 ## Deploy the web app
 
-The web app is fully static — any static host works. GitHub Pages: push the repo, enable Pages on the `main` branch, done. (Speech recognition, screen sharing, and PiP need Chrome/Edge over http(s), which Pages provides.)
+The web app is fully static and **live on GitHub Pages**: **https://piyushanand2006.github.io/Wingvox/** — open it in Chrome or Edge (speech recognition, screen sharing, and PiP need a real browser over http(s), which Pages provides).
+
+## Desktop download
+
+Grab `Wingvox-1.0.0-win-x64.zip` from the [v1.0.0 release](https://github.com/PiyushAnand2006/Wingvox/releases/tag/v1.0.0), unzip, run `Wingvox.exe` — fully self-contained (the app ships inside via the `wingvox://` protocol; no dev server). Unsigned build: SmartScreen will warn (More info → Run anyway).
 
 ## License
 
