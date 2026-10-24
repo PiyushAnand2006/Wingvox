@@ -1,0 +1,13 @@
+{
+  "name": "wingvox",
+  "productName": "Wingvox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Wingvox — real-time meeting copilot (reverse-engineered Cluely clone, beta)",
+  "scripts": {
+    "test": "node tests/run.js",
+    "check": "node --check js/app.js && node --check js/llm.js && node --check js/kb.js && node --check js/store.js && node --check js/speech.js && node --check js/screen.js && node --check js/audio.js && node --check js/triggers.js && node --check desktop/main.js && node --check desktop/preload.js"
+  },
+  "author": "Piyush Anand",
+  "license": "MIT"
+}
