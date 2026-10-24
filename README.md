@@ -93,6 +93,7 @@ js/screen.js      screen frames for vision
 js/app.js         Cluely flow wiring: pill/panel/dashboard, insights, actions, stealth, PiP, hotkeys
 desktop/          Electron shell: transparent always-on-top window + capture protection (F9)
 EVIDENCE.md       every Cluely claim + shipped-code findings (F1–F9), with sources
+assets/logo/      original Wingvox logo (© 2026, see assets/logo/LOGO-COPYRIGHT.md) — SVG/PNG + favicon
 ```
 
 ## Notes & ethics
