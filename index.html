@@ -84,6 +84,7 @@
     <nav class="side-nav">
       <button class="side-item active" data-view="general">&#9636;&nbsp; General</button>
       <button class="side-item" data-view="modes">&#9679;&nbsp; Modes</button>
+      <button class="side-item" data-view="transcript">&#128172;&nbsp; Transcript</button>
       <button class="side-item" data-view="notes">&#128221;&nbsp; Notes</button>
       <button class="side-item" data-view="knowledge">&#128218;&nbsp; Knowledge</button>
       <button class="side-item" data-view="settings">&#9881;&nbsp; Settings</button>
@@ -109,6 +110,19 @@
       <h2 class="dash-h">Modes</h2>
       <p class="dash-sub">Personas recovered from Cluely's shipped build — same prompts, same note sections.</p>
       <div id="modeGrid2" class="mode-grid"></div>
+    </section>
+
+    <!-- Transcript -->
+    <section id="dash-transcript" class="dash-view">
+      <h2 class="dash-h">Transcript</h2>
+      <p class="dash-sub">Every finalized line this session — from the microphone or system-audio loopback. Kept in this browser only.</p>
+      <div class="row-bar">
+        <span id="transcriptCount" class="dim small"></span>
+        <span class="spacer"></span>
+        <button id="btnExportT" class="btn" disabled>Export .txt</button>
+        <button id="btnClearSession" class="btn">Clear session</button>
+      </div>
+      <div id="transcriptView" class="notes"><div class="empty dim">No lines yet. Start a session from the pill.</div></div>
     </section>
 
     <!-- Notes -->
@@ -147,6 +161,13 @@
         <input id="setKey" type="password" placeholder="sk-…"/>
         <label>Model</label>
         <input id="setModel" placeholder="gpt-4o-mini"/>
+        <label>Audio source</label>
+        <select id="setAudioSource">
+          <option value="mic">Microphone — Web Speech, works keyless</option>
+          <option value="system">System audio (loopback) — hears the other party, needs API key</option>
+        </select>
+        <label>Transcription model (system-audio mode)</label>
+        <input id="setSttModel" placeholder="whisper-1"/>
         <label>Mode</label>
         <select id="personaSel"></select>
         <label>Custom instructions</label>
@@ -168,8 +189,10 @@
 
 <script src="js/store.js"></script>
 <script src="js/kb.js"></script>
+<script src="js/triggers.js"></script>
 <script src="js/llm.js"></script>
 <script src="js/speech.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/screen.js"></script>
 <script src="js/app.js"></script>
 </body>

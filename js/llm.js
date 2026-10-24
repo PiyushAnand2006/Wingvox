@@ -97,50 +97,88 @@
     return parts.join('\n');
   }
 
-  function buildUserMessage(actionPrompt, question, withScreen) {
+  function buildUserMessage(actionPrompt, question, withScreen, convo, kb) {
     const bits = [];
     if (withScreen && window.ScreenCtx && window.ScreenCtx.hasFrame()) {
       bits.push('(A screenshot of the user\'s screen is attached.)');
     }
     bits.push(actionPrompt);
-    const convo = transcriptText();
     if (convo) bits.push('Recent conversation transcript:\n' + convo);
-    const kb = window.KB.contextBlock(question || actionPrompt + ' ' + convo.slice(-800));
     if (kb) bits.push('Relevant knowledge base excerpts:\n' + kb);
     if (question) bits.push('User\'s question: ' + question);
     return bits.join('\n\n');
   }
 
   // ---- real API call (OpenAI-compatible chat completions; key stays in the browser) ----
-  async function callReal(userMsg, imageDataUrl) {
+  // With onDelta: stream the response (SSE) and deliver tokens as they arrive.
+  async function callReal(userMsg, imageDataUrl, onDelta) {
     const st = S();
     const content = [{ type: 'text', text: userMsg }];
     if (imageDataUrl) content.push({ type: 'image_url', image_url: { url: imageDataUrl } });
+    const base = {
+      model: st.model,
+      temperature: 0.4,
+      max_tokens: 500,
+      messages: [
+        { role: 'system', content: systemPrompt() },
+        { role: 'user', content },
+      ],
+    };
     const res = await fetch(st.endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + st.apiKey },
-      body: JSON.stringify({
-        model: st.model,
-        temperature: 0.4,
-        max_tokens: 500,
-        messages: [
-          { role: 'system', content: systemPrompt() },
-          { role: 'user', content },
-        ],
-      }),
+      body: JSON.stringify(onDelta ? { ...base, stream: true } : base),
     });
     if (!res.ok) throw new Error('API ' + res.status + ': ' + (await res.text()).slice(0, 200));
-    const j = await res.json();
-    return j.choices?.[0]?.message?.content?.trim() || '(empty response)';
+
+    if (!onDelta || !res.body) {
+      const j = await res.json();
+      return j.choices?.[0]?.message?.content?.trim() || '(empty response)';
+    }
+    // SSE stream: lines of "data: {json}", terminated by "data: [DONE]"
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', full = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const j = JSON.parse(payload);
+          const delta = j.choices?.[0]?.delta?.content;
+          if (delta) { full += delta; onDelta(delta); }
+        } catch { /* partial frame */ }
+      }
+    }
+    return full.trim() || '(empty response)';
   }
 
   // ---- mock engine: template answers grounded in transcript + KB so everything works keyless ----
-  function callMock(userMsg, imageDataUrl, kindHint) {
-    const convo = transcriptText(10);
+  async function callMock(userMsg, imageDataUrl, kindHint, onDelta, ctx) {
+    await new Promise(r => setTimeout(r, 250)); // feel "live"
+    const full = mockAnswer(userMsg, imageDataUrl, kindHint, ctx);
+    if (!onDelta) return full;
+    // simulate streaming: reveal in small chunks
+    for (let i = 0; i < full.length; i += 24) {
+      onDelta(full.slice(i, i + 24));
+      await new Promise(r => setTimeout(r, 18));
+    }
+    return full;
+  }
+
+  function mockAnswer(userMsg, imageDataUrl, kindHint, ctx = {}) {
+    // ctx is snapshotted at call time — the mock must not re-read live state
+    // mid-answer (a swapped Store or edited KB mid-flight would corrupt it)
+    const convo = ctx.convo || '';
+    const kb = ctx.kb || '';
     const last = convo.split('\n').filter(Boolean).pop() || 'the conversation so far';
-    const kb = window.KB.contextBlock(convo.slice(-500));
     const screen = imageDataUrl ? ' (screen attached — describe what you see in the Ask box with a real model for vision)' : '';
-    const p = persona();
     const tables = {
       assist: `Quick take on: "${last}"\n\n- Lead with the direct answer; one supporting detail; stop talking.\n- If it's a technical topic, name one concrete example.${kb ? '\n- From your knowledge base: ' + kb.split('\n').slice(0, 4).join(' ') : ''}`,
       say: `Here's a line you can say:\n\n"That's a great question — based on what we've discussed, my take is [your point], and here's why: [one reason]. Happy to go deeper if useful."`,
@@ -153,14 +191,16 @@
     return tables.assist;
   }
 
-  async function run(actionPrompt, { question = '', kind = 'assist', withScreen = false } = {}) {
-    const userMsg = buildUserMessage(actionPrompt, question, withScreen);
+  async function run(actionPrompt, { question = '', kind = 'assist', withScreen = false, onDelta } = {}) {
+    // snapshot context at call time — stable even if state changes mid-answer
+    const convo = transcriptText(10);
+    const kb = window.KB.contextBlock(question || actionPrompt + ' ' + convo.slice(-800));
+    const userMsg = buildUserMessage(actionPrompt, question, withScreen, convo, kb);
     const img = withScreen && window.ScreenCtx?.hasFrame() ? window.ScreenCtx.frameDataUrl() : null;
     if (S().apiKey && S().endpoint && S().model) {
-      return callReal(userMsg, img);
+      return callReal(userMsg, img, onDelta);
     }
-    await new Promise(r => setTimeout(r, 350)); // feel "live"
-    return callMock(userMsg, img, kind);
+    return callMock(userMsg, img, kind, onDelta, { convo, kb });
   }
 
   // structured meeting notes using the persona's shipped summarySections (F5)
@@ -202,10 +242,10 @@
   window.LLM = {
     PROMPTS, PERSONAS, persona, run, notes, brief,
     isLive: () => !!(S().apiKey && S().endpoint && S().model),
-    assist: (q, withScreen) => run(PROMPTS.assistConv, { question: q, kind: 'assist', withScreen }),
-    sayWhat: () => run(PROMPTS.say, { kind: 'say' }),
-    followups: () => run(PROMPTS.followups, { kind: 'followups' }),
-    recap: () => run(PROMPTS.recap, { kind: 'recap' }),
-    ask: (q, withScreen) => run('', { question: q, kind: 'ask', withScreen }),
+    assist: (q, withScreen, onDelta) => run(PROMPTS.assistConv, { question: q, kind: 'assist', withScreen, onDelta }),
+    sayWhat: (onDelta) => run(PROMPTS.say, { kind: 'say', onDelta }),
+    followups: (onDelta) => run(PROMPTS.followups, { kind: 'followups', onDelta }),
+    recap: (onDelta) => run(PROMPTS.recap, { kind: 'recap', onDelta }),
+    ask: (q, withScreen, onDelta) => run('', { question: q, kind: 'ask', withScreen, onDelta }),
   };
 })();

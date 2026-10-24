@@ -5,19 +5,16 @@
   const $ = (id) => document.getElementById(id);
   const Store = window.Store, LLM = window.LLM, KB = window.KB, Speech = window.Speech;
 
-  // ---------- Live Insights trigger detection (mirrors their server-side keyword detection) ----------
-  const OBJECTION = /\b(too expensive|too pricey|out of budget|not sure (this|it)|we (already|tried)|competitor|cheaper|budget is|hold off|not interested|think about it|another vendor)\b/i;
-  const TERM = /\b(discounted cash flow|dcf|cap ?table| churn|arr|mrr|nrr|ebitda|sla|okr|kpi|latency|throughput|kubernetes|load balanc\w+|microservice\w*|api|oauth|sso|gdpr|soc ?2|rabbitmq|kafka|postgres\w*|redis|index fund|expense ratio)\b/i;
-  const QUESTION = /\?$|\b(how (do|does|did|would|can)|what (is|are|was|if)|why (is|do|does|would)|walk me through|tell me about|explain|have you (used|worked|built)|describe|could you|can you|do you)\b/i;
+  // ---------- Live Insights trigger detection ----------
+  // Detection lives in js/triggers.js (mirrors their server-side keyword
+  // detection, EVIDENCE.md F7); the 4s throttle lives here.
+  const { detect: detectKind, QUESTION, OBJECTION } = window.Triggers;
   let lastTriggerAt = 0;
 
   function detectTrigger(text) {
     const now = Date.now();
     if (now - lastTriggerAt < 4000) return;
-    let kind = null;
-    if (OBJECTION.test(text)) kind = 'objection';
-    else if (QUESTION.test(text)) kind = 'question';
-    else if (TERM.test(text)) kind = 'term';
+    const kind = detectKind(text);
     if (!kind) return;
     lastTriggerAt = now;
     addInsight(kind, text, Store.settings.autoInsights);
@@ -39,15 +36,25 @@
     return card;
   }
 
+  let rafPending = false;
+  function renderInsightsSoon() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; renderInsights(); });
+  }
+
   async function answerInsight(card) {
     card.loading = true; card.open = true; renderInsights();
     try {
       const withScreen = Store.settings.autoScreenCtx && window.ScreenCtx?.hasFrame();
-      card.answer = await LLM.assist(card.heard, withScreen);
+      card.answer = await LLM.assist(card.heard, withScreen, (delta) => {
+        card.answer = (card.answer === 'thinking…' ? '' : card.answer) + delta;
+        renderInsightsSoon();
+      });
     } catch (e) {
       card.answer = '⚠ ' + (e.message || e);
     } finally {
-      card.loading = false; renderInsights();
+      card.loading = false; renderInsights(); Store.sessionSave();
     }
   }
 
@@ -71,23 +78,27 @@
       wrap.appendChild(chip);
       if (c.open) {
         const body = document.createElement('div');
-        body.className = 'answer' + (c.loading ? ' loading' : '');
-        body.textContent = c.loading ? 'thinking…' : c.answer;
+        body.className = 'answer' + (c.loading && !c.answer ? ' loading' : '');
+        body.textContent = c.answer || 'thinking…';
         wrap.appendChild(body);
       }
       host.appendChild(wrap);
     }
   }
 
-  // push a manually-triggered result (quick actions / ask) as an opened chip
-  function pushResult(kind, heard, promise) {
+  // push a manually-triggered result (quick actions / ask) as an opened chip;
+  // fn(onDelta) starts the request and streams deltas into the card.
+  function pushResult(kind, heard, fn) {
     const card = { id: 'i' + (++uid), kind, heard, answer: '', loading: true, open: true };
     Store.insights.unshift(card);
     renderInsights();
-    promise
+    fn((delta) => {
+      card.answer = (card.answer === 'thinking…' ? '' : card.answer) + delta;
+      renderInsightsSoon();
+    })
       .then(a => { card.answer = a; })
       .catch(e => { card.answer = '⚠ ' + (e.message || e); })
-      .finally(() => { card.loading = false; renderInsights(); });
+      .finally(() => { card.loading = false; renderInsights(); Store.sessionSave(); });
   }
 
   // ---------- transcript / session ----------
@@ -97,19 +108,33 @@
     $('btnSession').classList.toggle('running', on);
     $('btnSession').title = on ? 'Stop session' : 'Start session (Ctrl+Shift+L)';
     $('stateDot').classList.toggle('live', on);
-    $('stateText').textContent = on ? 'Listening' : 'Idle';
+    $('stateText').textContent = on ? (Store.settings.audioSource === 'system' ? 'Listening·loopback' : 'Listening') : 'Idle';
     const sl = $('sideListen');
     sl.textContent = on ? 'Stop session' : 'Start session';
     sl.classList.toggle('stop', on);
     const label = $('askLabel');
     if (on) { label.textContent = 'Ask'; label.classList.add('shimmer'); setTimeout(() => label.classList.remove('shimmer'), 3000); }
-    if (on) Speech.start(Store.settings.lang); else Speech.stop();
+    if (on) {
+      if (Store.settings.audioSource === 'system' && window.AudioLoop) {
+        window.AudioLoop.start().catch((e) => {
+          flash(e.message || e);
+          setSession(false);
+        });
+      } else {
+        Speech.start(Store.settings.lang);
+      }
+    } else {
+      Speech.stop();
+      window.AudioLoop?.stop();
+    }
     if (on) updateDashSession();
   }
 
   function onFinalTranscript(text) {
     detectTrigger(text);
     updateDashSession();
+    renderTranscriptView();
+    Store.sessionSave();
   }
 
   function updateDashSession() {
@@ -117,6 +142,53 @@
     if (!lines.length) return;
     $('dashSession').classList.remove('dim');
     $('dashSession').textContent = lines.length + ' lines captured · last: ' + lines[lines.length - 1].text.slice(0, 90);
+  }
+
+  // ---------- transcript view (dashboard) ----------
+  function renderTranscriptView() {
+    const host = $('transcriptView');
+    if (!host) return;
+    const lines = Store.transcript.filter(l => l.final);
+    $('transcriptCount').textContent = lines.length ? lines.length + ' lines' : '';
+    $('btnExportT').disabled = !lines.length;
+    if (!lines.length) {
+      host.innerHTML = '<div class="empty dim">No lines yet. Start a session from the pill.</div>';
+      return;
+    }
+    const parts = lines.map(l => {
+      const t = new Date(l.ts);
+      const hh = (m) => m.toString().padStart(2, '0');
+      return `<div><b>${hh(t.getHours())}:${hh(t.getMinutes())}:${hh(t.getSeconds())}</b> &nbsp;${escapeHtml(l.text)}</div>`;
+    });
+    host.innerHTML = parts.join('');
+    host.scrollTop = host.scrollHeight;
+  }
+
+  function exportTranscript() {
+    const lines = Store.transcript.filter(l => l.final);
+    if (!lines.length) return;
+    const body = lines.map(l => {
+      const t = new Date(l.ts);
+      const hh = (m) => m.toString().padStart(2, '0');
+      return `[${hh(t.getHours())}:${hh(t.getMinutes())}:${hh(t.getSeconds())}] ${l.text}`;
+    }).join('\n');
+    const blob = new Blob([body], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'wingvox-transcript-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function clearSession() {
+    Store.transcript = [];
+    Store.insights = [];
+    Store.notesMD = null;
+    Store.sessionClear();
+    renderInsights();
+    renderTranscriptView();
+    $('dashSession').classList.add('dim');
+    $('dashSession').textContent = 'No session yet in this browser. Start one from the pill.';
   }
 
   // ---------- demo ----------
@@ -154,14 +226,14 @@
     if (!target) { flash('Nothing to assist on yet.'); return; }
     $('askInput').value = '';
     const withScreen = $('screenAttach').checked && window.ScreenCtx?.hasFrame();
-    pushResult('question', q || target, LLM.assist(target, withScreen));
+    pushResult('question', q || target, (onDelta) => LLM.assist(target, withScreen, onDelta));
   }
   function doAsk() {
     const q = $('askInput').value.trim();
     if (!q) { doAssist(); return; }
     $('askInput').value = '';
     const withScreen = $('screenAttach').checked && window.ScreenCtx?.hasFrame();
-    pushResult('question', q, LLM.ask(q, withScreen));
+    pushResult('question', q, (onDelta) => LLM.ask(q, withScreen, onDelta));
   }
 
   function setThinking(on) {
@@ -175,9 +247,9 @@
       if (!chip) return;
       const action = chip.dataset.action;
       if (action === 'assist') doAssist();
-      if (action === 'say') pushResult('term', 'What should I say?', LLM.sayWhat());
-      if (action === 'follow') pushResult('term', 'Follow-up questions', LLM.followups());
-      if (action === 'recap') pushResult('term', 'Recap', LLM.recap());
+      if (action === 'say') pushResult('term', 'What should I say?', (d) => LLM.sayWhat(d));
+      if (action === 'follow') pushResult('term', 'Follow-up questions', (d) => LLM.followups(d));
+      if (action === 'recap') pushResult('term', 'Recap', (d) => LLM.recap(d));
       setThinking(true);
       setTimeout(() => setThinking(false), 2500);
     });
@@ -222,6 +294,7 @@
   function switchDash(view) {
     document.querySelectorAll('.side-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     document.querySelectorAll('.dash-view').forEach(v => v.classList.toggle('active', v.id === 'dash-' + view));
+    if (view === 'transcript') renderTranscriptView();
   }
 
   // ---------- drag (pill = drag handle; chat panel follows, like ControlAndChatWindowPosition) ----------
@@ -381,6 +454,7 @@
     const st = Store.settings;
     $('setEndpoint').value = st.endpoint; $('setKey').value = st.apiKey;
     $('setModel').value = st.model; $('setInstr').value = st.instructions;
+    $('setAudioSource').value = st.audioSource; $('setSttModel').value = st.sttModel;
     $('setAuto').checked = st.autoInsights; $('setScreenCtx').checked = st.autoScreenCtx;
     $('setOpacity').value = st.opacity; $('opVal').textContent = st.opacity;
     $('overlay').style.opacity = st.opacity / 100;
@@ -389,12 +463,14 @@
       st.endpoint = $('setEndpoint').value.trim() || st.endpoint;
       st.apiKey = $('setKey').value.trim();
       st.model = $('setModel').value.trim() || st.model;
+      st.audioSource = $('setAudioSource').value;
+      st.sttModel = $('setSttModel').value.trim() || 'whisper-1';
       st.instructions = $('setInstr').value;
       st.autoInsights = $('setAuto').checked;
       st.autoScreenCtx = $('setScreenCtx').checked;
       Store.save();
     };
-    for (const id of ['setEndpoint', 'setKey', 'setModel', 'setInstr', 'setAuto', 'setScreenCtx'])
+    for (const id of ['setEndpoint', 'setKey', 'setModel', 'setInstr', 'setAuto', 'setScreenCtx', 'setAudioSource', 'setSttModel'])
       $(id).addEventListener('change', save);
     $('setOpacity').addEventListener('input', () => {
       st.opacity = +$('setOpacity').value; $('opVal').textContent = st.opacity;
@@ -450,9 +526,9 @@
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); enterPip(); }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'l') { e.preventDefault(); setSession(!Store.listening); }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); toggleDashboard(true); switchDash('knowledge'); }
-    else if (mod && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); toggleChat(true); pushResult('term', 'What should I say?', LLM.sayWhat()); }
-    else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleChat(true); pushResult('term', 'Follow-up questions', LLM.followups()); }
-    else if (mod && e.shiftKey && e.key.toLowerCase() === 'r') { e.preventDefault(); toggleChat(true); pushResult('term', 'Recap', LLM.recap()); }
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); toggleChat(true); pushResult('term', 'What should I say?', (d) => LLM.sayWhat(d)); }
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleChat(true); pushResult('term', 'Follow-up questions', (d) => LLM.followups(d)); }
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 'r') { e.preventDefault(); toggleChat(true); pushResult('term', 'Recap', (d) => LLM.recap(d)); }
     else if (e.altKey && e.key.startsWith('Arrow')) {
       e.preventDefault();
       const step = 24;
@@ -545,6 +621,8 @@
     $('btnNotes').onclick = genNotes;
     $('btnExport').onclick = exportNotes;
     $('btnBrief').onclick = genBrief;
+    $('btnExportT').onclick = exportTranscript;
+    $('btnClearSession').onclick = clearSession;
 
     // screen share chip — enables "ask about your screen"
     const screenChip = document.createElement('button');
@@ -571,6 +649,8 @@
     renderModeGrids();
     renderInsights();
     renderKB();
+    renderTranscriptView();
+    updateDashSession();
     if (!Speech.supported()) flash('No Web Speech API here — use demo mode or Chrome/Edge.');
   }
 

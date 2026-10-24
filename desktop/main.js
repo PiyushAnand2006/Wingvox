@@ -112,7 +112,10 @@ let winAnchor = null;        // { centerX, y } — where the pill sits on screen
 let savedPillAnchor = null;  // pill anchor while the dashboard borrows the window
 
 function clampToWorkArea(x, y, width, height) {
-  const { workArea } = screen.getPrimaryDisplay();
+  // clamp against the display that actually contains the window (multi-monitor),
+  // falling back to the primary display when nothing matches
+  const d = screen.getDisplayMatching({ x, y, width, height });
+  const { workArea } = d;
   return {
     x: Math.max(workArea.x, Math.min(workArea.x + workArea.width - width, x)),
     y: Math.max(workArea.y, Math.min(workArea.y + workArea.height - height, y)),
@@ -121,7 +124,8 @@ function clampToWorkArea(x, y, width, height) {
 
 ipcMain.on('wingvox:set-size', (_e, opts = {}) => {
   if (!win || win.isDestroyed()) return;
-  const { workArea } = screen.getPrimaryDisplay();
+  // dashboard centers on whichever display the window is currently on
+  const { workArea } = screen.getDisplayMatching(win.getBounds());
 
   if (opts.mode === 'dashboard') {
     const width = Math.min(1150, Math.round(workArea.width * 0.88));
