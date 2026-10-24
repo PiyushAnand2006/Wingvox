@@ -24,18 +24,34 @@ The renderer runs in a browser tab or in the desktop shell; the shell's window i
 
 ![Wingvox architecture](diagrams/wingvox-architecture.svg)
 
-## Run it
+## Installation
 
-No build step, no server, no dependencies:
+### Option A — Desktop app (latest release: v1.0.0)
 
+1. Download `Wingvox-1.0.0-win-x64.zip` from the [latest release](https://github.com/PiyushAnand2006/Wingvox/releases/latest).
+2. Unzip anywhere (e.g. `C:\Tools\Wingvox`) — no installer, no admin rights needed.
+3. Run `Wingvox.exe`. On first launch Windows SmartScreen will warn because the build is unsigned — click **More info → Run anyway**.
+4. Quit the app from its taskbar icon when done.
+
+**Requirements:** Windows 10/11 x64. The app is fully self-contained — the UI ships inside the exe (served over the internal `wingvox://` protocol), so there is no server to run and nothing else to install. Capture protection is **ON by default**.
+
+### Option B — Web app (zero install)
+
+Open **https://piyushanand2006.github.io/Wingvox/** in **Chrome or Edge**. Everything works except OS-level capture protection — a browser tab cannot be excluded from screen share; that needs the desktop app.
+
+### Option C — From source (development)
+
+```bash
+git clone https://github.com/PiyushAnand2006/Wingvox.git
+cd Wingvox
+python -m http.server 8000        # serve the web app
+# second terminal:
+cd Wingvox/desktop
+npm install                       # once
+npm start                         # capture-protected shell, loads http://localhost:8000
 ```
-cd "C:\Users\thaku\hackathon-projects\Smart Cheat"   # folder: rename it to "Wingvox" if you like — the app is name-agnostic
-python -m http.server 8000
-```
 
-> To rename the folder itself: stop the dev server, close the editor workspace, then `mv "...\Smart Cheat" "...\Wingvox"`. Nothing in the app hardcodes the folder name.
-
-Then open http://localhost:8000 in **Chrome or Edge** (needed for Web Speech, PiP, and screen capture).
+`npm test` runs the unit suite, `npm run check` syntax-checks every module, and `WINGVOX_VERIFY=1|2 npm start` runs the capture-protection and window-sizing self-tests. Full desktop feature walkthrough: [Desktop mode](#desktop-mode--invisible-to-screen-share-the-cluely-trick).
 
 ## Desktop mode — invisible to screen share (the Cluely trick)
 
@@ -88,10 +104,6 @@ Zero-dependency test suite (`npm test`, no framework, in-process): trigger detec
 ## Deploy the web app
 
 The web app is fully static and **live on GitHub Pages**: **https://piyushanand2006.github.io/Wingvox/** — open it in Chrome or Edge (speech recognition, screen sharing, and PiP need a real browser over http(s), which Pages provides).
-
-## Desktop download
-
-Grab `Wingvox-1.0.0-win-x64.zip` from the [v1.0.0 release](https://github.com/PiyushAnand2006/Wingvox/releases/tag/v1.0.0), unzip, run `Wingvox.exe` — fully self-contained (the app ships inside via the `wingvox://` protocol; no dev server). Unsigned build: SmartScreen will warn (More info → Run anyway).
 
 ## License
 
