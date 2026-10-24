@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 64" width="216" height="64" role="img" aria-labelledby="wv-title wv-desc">
+  <title id="wv-title">Wingvox</title>
+  <desc id="wv-desc">Wingvox logo lockup: voice-wing mark and wordmark, for light backgrounds.</desc>
+  <!--
+    Wingvox logo lockup — light-background variant.
+    Original artwork created 2026-10-24 for the Wingvox project.
+    (c) 2026 Wingvox project. All rights reserved.
+    The wordmark is set in a geometric sans (textLength pinned for portability); the mark is the canonical identity.
+    See assets/logo/LOGO-COPYRIGHT.md
+  -->
+  <metadata xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <rdf:RDF>
+      <rdf:Description>
+        <dc:title>Wingvox logo lockup (light bg)</dc:title>
+        <dc:rights>(c) 2026 Wingvox project. All rights reserved.</dc:rights>
+        <dc:description>Original artwork created 2026-10-24 for the Wingvox project; not derived from any existing work.</dc:description>
+      </rdf:Description>
+    </rdf:RDF>
+  </metadata>
+  <defs>
+    <linearGradient id="wv-g" x1="12" y1="56" x2="54" y2="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3E8EF7"/>
+      <stop offset="1" stop-color="#6D4DF2"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 8) scale(0.75)" fill="url(#wv-g)">
+    <path d="M 12 44 C 18 20 38 6 56 9 C 40 16 26 30 18 48 C 15 47 12.5 46 12 44 Z"/>
+    <path d="M 11 50 C 19 36 34 22 52 25 C 38 31 26 42 17 55 C 13.5 54 11 52 11 50 Z"/>
+    <path d="M 13 55 C 26 43 34 38 40 40 C 33 44 27 47 16 57 C 14 56.5 12.8 56 13 55 Z"/>
+    <circle cx="15" cy="50" r="7.5"/>
+  </g>
+  <text x="53" y="42.5" font-family="Geist, 'Segoe UI', Inter, system-ui, sans-serif" font-size="30" font-weight="700" letter-spacing="-0.5" fill="#14151A" textLength="118" lengthAdjust="spacingAndGlyphs">wingvox</text>
+</svg>
