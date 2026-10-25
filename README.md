@@ -73,6 +73,45 @@ npm start                         # capture-protected shell, loads http://localh
 
 `npm test` runs the unit suite, `npm run check` syntax-checks every module, and `WINGVOX_VERIFY=1|2 npm start` runs the capture-protection and window-sizing self-tests. Full desktop feature walkthrough: [Desktop mode](#desktop-mode--invisible-to-screen-share-the-cluely-trick).
 
+## Commands
+
+Quick reference — every command in one place (run from the repo root unless noted).
+
+**Install / uninstall (desktop app)**
+
+| Command | What it does |
+|---|---|
+| `powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/PiyushAnand2006/Wingvox/main/install.ps1 \| iex"` | Downloads the latest release, installs per-user (no admin), creates Desktop + Start Menu shortcuts, registers the uninstaller, launches the app |
+| `& "$env:LOCALAPPDATA\Programs\Wingvox\uninstall.ps1"` | Uninstalls — removes the app, shortcuts, and the Settings → Apps entry |
+
+**Develop**
+
+| Command | What it does |
+|---|---|
+| `python -m http.server 8000` | Serves the web app at http://localhost:8000 |
+| `cd desktop && npm install` | Installs the desktop shell dependencies (once) |
+| `cd desktop && npm start` | Runs the capture-protected overlay shell |
+| `WINGVOX_URL=http://localhost:3000 npm start` | Points the shell at a different app URL |
+
+**Test & verify**
+
+| Command | What it does |
+|---|---|
+| `npm test` | Unit suite — triggers, knowledge base, prompts/personas + streaming, session persistence |
+| `npm run check` | Syntax-checks every module |
+| `WINGVOX_VERIFY=1 npm start` | A/B capture test — proves the window is excluded from screen share |
+| `WINGVOX_VERIFY=2 npm start` | Window-sizing test — captures collapsed / expanded / dashboard states |
+| `WINGVOX_SMOKE=1 npm start` | End-to-end smoke — pill → Ask → dashboard → insight pipeline, logs PASS/FAIL |
+
+**Build & release**
+
+| Command | What it does |
+|---|---|
+| `cd desktop && npm run dist:dir` | Unpacked build (`dist/win-unpacked/Wingvox.exe`) |
+| `cd desktop && npm run dist` | Installers — Windows NSIS + portable, macOS DMG, Linux AppImage |
+| `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z` | Tags a release (attach the built zip on the Releases page) |
+
+
 ## Desktop mode — invisible to screen share (the Cluely trick)
 
 In a plain browser tab, screen shares will always see the page — that's a browser limitation. The real feature needs the desktop shell (this is exactly what Cluely ships: `setContentProtection` on every window — see EVIDENCE.md F1/F9):
