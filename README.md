@@ -43,10 +43,15 @@ The renderer runs in a browser tab or in the desktop shell; the shell's window i
 
 ### Option A — Desktop app (latest release: v1.0.0)
 
-1. Download `Wingvox-1.0.0-win-x64.zip` from the [latest release](https://github.com/PiyushAnand2006/Wingvox/releases/latest).
-2. Unzip anywhere (e.g. `C:\Tools\Wingvox`) — no installer, no admin rights needed.
-3. Run `Wingvox.exe`. On first launch Windows SmartScreen will warn because the build is unsigned — click **More info → Run anyway**.
-4. Quit the app from its taskbar icon when done.
+Install with one command — run this in PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/PiyushAnand2006/Wingvox/v1.0.0/install.ps1 | iex"
+```
+
+The installer downloads the release, installs to `%LOCALAPPDATA%\Programs\Wingvox` (no admin needed), creates **Desktop + Start Menu shortcuts**, registers an uninstaller in **Settings → Apps → Wingvox**, and launches the app. Uninstall anytime from Settings → Apps, or run `uninstall.ps1` from the install folder.
+
+Prefer manual? Download `Wingvox-1.0.0-win-x64.zip` from the [latest release](https://github.com/PiyushAnand2006/Wingvox/releases/latest), unzip anywhere, and run `Wingvox.exe`. On first launch Windows SmartScreen warns because the build is unsigned — click **More info → Run anyway**.
 
 **Requirements:** Windows 10/11 x64. The app is fully self-contained — the UI ships inside the exe (served over the internal `wingvox://` protocol), so there is no server to run and nothing else to install. Capture protection is **ON by default**.
 
