@@ -1,3 +1,4 @@
+
 # Wingvox
 
 > **⚠ Reverse-engineered beta** — Wingvox is a reverse-engineered clone built for learning and hackathon purposes. It is **still under development and testing**: expect rough edges, breaking changes, and features that may not work in every browser or OS version.
@@ -22,7 +23,7 @@ Floating above other apps (the dashboard here), and the dashboard itself:
 
 <div align="center">
 
-[![Wingvox demo video — click to play](docs/demo/brag-poster.jpg)](docs/demo/brag.mp4)
+https://github.com/user-attachments/assets/adc264d1-ec69-4ad0-8a22-934ce46fffd9
 
 </div>
 
