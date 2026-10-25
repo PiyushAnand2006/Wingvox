@@ -32,7 +32,7 @@
     ],
     "win": {
       "target": ["nsis", "portable"],
-      "icon": "../assets/logo/wingvox-mark-256.png"
+      "icon": "../assets/logo/wingvox.ico"
     },
     "nsis": {
       "oneClick": true,
