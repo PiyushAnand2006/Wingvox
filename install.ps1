@@ -27,11 +27,18 @@ $zip = Join-Path $env:TEMP "Wingvox-$Version.zip"
 Write-Host "Downloading Wingvox $Version ..." -ForegroundColor Cyan
 Invoke-WebRequest -Uri $ZipUrl -OutFile $zip -UseBasicParsing
 
-# 3. clean install directory, extract
+# 3. clean install directory, extract (normalize: some layouts wrap files in a folder)
 if (Test-Path $Dest) { Remove-Item -Recurse -Force $Dest }
 New-Item -ItemType Directory -Path $Dest -Force | Out-Null
 Write-Host 'Extracting ...'
-Expand-Archive -Path $zip -DestinationPath $Dest -Force
+$stage = Join-Path $env:TEMP 'Wingvox-stage'
+if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+New-Item -ItemType Directory -Path $stage -Force | Out-Null
+Expand-Archive -Path $zip -DestinationPath $stage -Force
+$exeSrc = Get-ChildItem -Path $stage -Recurse -Filter 'Wingvox.exe' | Select-Object -First 1
+if (-not $exeSrc) { throw 'Install failed: Wingvox.exe not found in the release zip.' }
+Move-Item -Path (Join-Path $exeSrc.Directory.FullName '*') -Destination $Dest -Force
+Remove-Item -Recurse -Force $stage
 Remove-Item $zip -Force
 
 if (-not (Test-Path $Exe)) { throw 'Install failed: Wingvox.exe not found after extraction.' }
