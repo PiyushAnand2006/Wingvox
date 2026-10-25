@@ -46,7 +46,7 @@ The renderer runs in a browser tab or in the desktop shell; the shell's window i
 Install with one command — run this in PowerShell:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/PiyushAnand2006/Wingvox/v1.0.0/install.ps1 | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/PiyushAnand2006/Wingvox/main/install.ps1 | iex"
 ```
 
 The installer downloads the release, installs to `%LOCALAPPDATA%\Programs\Wingvox` (no admin needed), creates **Desktop + Start Menu shortcuts**, registers an uninstaller in **Settings → Apps → Wingvox**, and launches the app. Uninstall anytime from Settings → Apps, or run `uninstall.ps1` from the install folder.
