@@ -58,14 +58,21 @@ Write-Host 'Wingvox has been uninstalled.'
 Set-Content -Path (Join-Path $Dest 'uninstall.ps1') -Value $uninstallScript -Encoding UTF8
 
 # 5. shortcuts: Start Menu + Desktop (like every installed app)
+# Icon points at a standalone .ico (copied from the bundled assets) rather than
+# the exe — Windows caches shortcut icons by path, so pointing at the exe keeps
+# showing a stale icon after the exe's embedded resources change.
 $shell = New-Object -ComObject WScript.Shell
+$icoInBundle = Join-Path $Dest 'resources\app\assets\logo\wingvox.ico'
+$icoForLnk  = Join-Path $Dest 'wingvox.ico'
+if (Test-Path $icoInBundle) { Copy-Item $icoInBundle $icoForLnk -Force }
+$iconSource = if (Test-Path $icoForLnk) { $icoForLnk } else { $Exe }
 $startMenuLnk = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Wingvox.lnk'
 $desktopLnk   = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Wingvox.lnk'
 foreach ($lnkPath in @($startMenuLnk, $desktopLnk)) {
   $lnk = $shell.CreateShortcut($lnkPath)
   $lnk.TargetPath = $Exe
   $lnk.WorkingDirectory = $Dest
-  $lnk.IconLocation = "$Exe,0"
+  $lnk.IconLocation = "$iconSource,0"
   $lnk.Description = 'Wingvox - real-time meeting copilot'
   $lnk.Save()
 }
